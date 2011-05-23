@@ -17,5 +17,11 @@ tmtags
 coverage
 rdoc
 pkg
+.bundle/*
+.bundle
+.idea/*
+.idea
 
 ## PROJECT::SPECIFIC
+
+

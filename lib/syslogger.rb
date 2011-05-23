@@ -44,6 +44,9 @@ class Syslogger
     @options = options || (Syslog::LOG_PID | Syslog::LOG_CONS)
     @facility = facility
     @level = Logger::INFO
+    # give up a little flexibilty for some performance gains
+    @sys_log = Syslog.open(@ident, @options, @facility)
+    @sys_log_lock = Mutex.new
   end
 
   %w{debug info warn error fatal unknown}.each do |logger_method|
@@ -71,13 +74,15 @@ class Syslogger
   # +progname+:: optionally, overwrite the program name that appears in the log message.
   def add(severity, message = nil, progname = nil, &block)
     progname ||= @ident
-    Syslog.open(progname, @options, @facility) { |s|
+    msg = clean(message || (block && block.call) || progname)
+    s = @sys_log
+    @sys_log_lock.synchronize do
       s.mask = Syslog::LOG_UPTO(MAPPING[@level])
       s.log(
-        MAPPING[severity], 
-        clean(message || (block && block.call) || progname)
+        MAPPING[severity],
+        msg
       )
-    }
+    end
   end
 
   # Sets the minimum level for messages to be written in the log.
@@ -93,7 +98,6 @@ class Syslogger
     message = message.to_s.dup
     message.strip!
     message.gsub!(/%/, '%%') # syslog(3) freaks on % (printf)
-    message.gsub!(/\e\[[^m]*m/, '') # remove useless ansi color codes
     message
   end
 end
