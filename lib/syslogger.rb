@@ -3,7 +3,7 @@ require 'logger'
 
 class Syslogger
 
-  VERSION = "1.2.4"
+  VERSION = "1.2.5"
 
   attr_reader :level, :ident, :options, :facility
 
@@ -15,6 +15,20 @@ class Syslogger
     Logger::FATAL => Syslog::LOG_ERR,
     Logger::UNKNOWN => Syslog::LOG_ALERT
   }
+
+  # Silences the logger for the duration of the block.
+  def silence(temporary_level = ERROR)
+    if true
+      begin
+        old_logger_level, self.level = level, temporary_level
+        yield self
+      ensure
+        self.level = old_logger_level
+      end
+    else
+      yield self
+    end
+  end
 
   #
   # Initializes default options for the logger
@@ -43,7 +57,7 @@ class Syslogger
     @ident = ident
     @options = options || (Syslog::LOG_PID | Syslog::LOG_CONS)
     @facility = facility
-    @level = Logger::INFO
+    @level = Logger::DEBUG
     # give up a little flexibilty for some performance gains
     @sys_log = Syslog.open(@ident, @options, @facility)
     @sys_log_lock = Mutex.new
@@ -73,6 +87,7 @@ class Syslogger
   #             If both are nil or no block is given, it will use the progname as per the behaviour of both the standard Ruby logger, and the Rails BufferedLogger.
   # +progname+:: optionally, overwrite the program name that appears in the log message.
   def add(severity, message = nil, progname = nil, &block)
+    return if @level > severity
     progname ||= @ident
     msg = clean(message || (block && block.call) || progname)
     s = @sys_log
