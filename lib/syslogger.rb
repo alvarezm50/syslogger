@@ -111,7 +111,7 @@ class Syslogger
   # Borrowed from SyslogLogger.
   def clean(message)
     message = message.to_s.dup
-    message.strip!
+    message.rstrip!
     message.gsub!(/%/, '%%') # syslog(3) freaks on % (printf)
     message
   end
