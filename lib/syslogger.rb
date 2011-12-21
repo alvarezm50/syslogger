@@ -63,16 +63,33 @@ class Syslogger
     @sys_log_lock = Mutex.new
   end
 
-  %w{debug info warn error fatal unknown}.each do |logger_method|
-    define_method logger_method.to_sym do |message|
-      add(Logger.const_get(logger_method.upcase), message)
-    end
+  #%w{debug info warn error fatal unknown}.each do |logger_method|
+  #  define_method logger_method.to_sym do |message|
+  #    add(Logger.const_get(logger_method.upcase), message)
+  #  end
+  #
+  #  unless logger_method == 'unknown'
+  #    define_method "#{logger_method}?".to_sym do
+  #      @level <= Logger.const_get(logger_method.upcase)
+  #    end
+  #  end
+  #end
 
-    unless logger_method == 'unknown'
-      define_method "#{logger_method}?".to_sym do
-        @level <= Logger.const_get(logger_method.upcase)
-      end
-    end
+  # Dynamically add methods such as:
+  # def info
+  # def warn
+  # def debug
+  %w{debug info warn error fatal unknown}.each do |severity|
+    log_level = Logger.const_get(severity.upcase)
+    class_eval <<-EOT, __FILE__, __LINE__ + 1
+      def #{severity.downcase}(message = nil, progname = nil, &block) # def debug(message = nil, progname = nil, &block)
+        add(#{log_level}, message, progname, &block)                   #   add(DEBUG, message, progname, &block)
+      end                                                             # end
+
+      def #{severity.downcase}?                                       # def debug?
+        #{log_level} >= @level                                         #   DEBUG >= @level
+      end                                                             # end
+    EOT
   end
 
   # Logs a message at the Logger::INFO level.

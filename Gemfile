@@ -2,5 +2,9 @@ gemspec
 
 source :gemcutter
 
-gem "rake", "~> 0.8.7"
-gem "rspec", "~>2.4"
+gem "rake", "~> 0.9.2"
+
+group :test do
+gem "rspec"
+gem "rspec-core"
+end
